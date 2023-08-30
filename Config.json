@@ -1,0 +1,17 @@
+{
+    "Navegador":"",
+    "Autentication_Type":"",
+    "Link_Jira": "",
+    "Email": "",
+    "Password": "",
+    "Answers": 
+        {
+            "mascota":  "",
+            "equipo": "",
+            "pelicula": "",
+            "colegio":""
+        }
+    ,
+    "Logwork_hours":"",
+    "Logwork_date_hour": ""
+}
