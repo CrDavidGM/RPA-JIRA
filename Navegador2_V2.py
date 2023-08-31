@@ -4,7 +4,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 
-import threading
 import tkinter as tk
 import json
 
@@ -70,7 +69,7 @@ else:
 #print(fecha_formateada)
 
 opciones = webdriver.ChromeOptions()
-#opciones.add_argument("--headless")
+opciones.add_argument("--headless")
 driver = webdriver.Chrome(options=opciones)
 
 # Abrir el sitio web del Jira
@@ -93,13 +92,11 @@ if current_url != link_jira:
     button_submit = wait.until(EC.presence_of_element_located((By.ID,"submitButton")))
     button_submit.click()
 
-
     button_change_parameters = wait.until(EC.presence_of_element_located((By.ID,"differentVerificationOption")))
     button_change_parameters.click()
 
     button_questions = wait.until(EC.presence_of_element_located((By.ID,"verificationOption2")))
     button_questions.click()
-
 
     lbl_question1 = wait.until(EC.presence_of_element_located((By.ID, "question1Input")))
     lbl_question2 = wait.until(EC.presence_of_element_located((By.ID, "question2Input")))
@@ -140,18 +137,15 @@ input_date_logged = wait.until(EC.presence_of_element_located((By.ID,"log-work-d
 input_date_logged.clear()
 input_date_logged.send_keys(fecha_formateada)
 
-WebDriverWait(driver, 5).until(
-    EC.presence_of_element_located((By.ID, "comment"))
-)  # Wait until the `text_to_score` element appear (up to 5 seconds)
-driver.find_element(By.ID,"comment").clear()
-driver.find_element(By.ID,'comment').send_keys("text")
+div_ta = wait.until(EC.presence_of_element_located((By.ID,"log-work-dialog")))
+div_ta.click()
+input_ta = wait.until(EC.presence_of_element_located((By.XPATH,"/html/body/div[17]/div[2]/form/div[1]/fieldset/div[4]/div[1]/div[1]/div[9]/textarea")))
+input_ta.send_keys(content)
+#print(type(input_ta))
+#element.send_keys("Hola")
+#driver.execute_script("arguments[0].value = 'myValue';", element)
 
-#print(content)
-#input_comment = wait.until(EC.element_to_be_clickable((By.ID, "comment")))
-#input_comment.click()
-#driver.execute_script("arguments[0].value = arguments[1]",input_comment,content)
-#input_comment.clear()
-#input_comment.send_keys(content)
+#driver.execute_script('document.querySelector("#comment").innerText = "Nuevo texto"')
 
 # Mantener la ventana abierta hasta que presiones Enter
 input("Presiona Enter para finalizar...")
