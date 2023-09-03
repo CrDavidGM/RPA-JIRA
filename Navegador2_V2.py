@@ -3,19 +3,20 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
+import time
 
 import tkinter as tk
 import json
 
 #=================================================================
 #Archivo JSON
-with open("Config.json","r") as archivo:
-    config = json.load(archivo) 
+with open("ConfigPersonal.json","r") as archivo:
+    config = json.load(archivo)
 
 navegador = config["Navegador"]
 autentication_type = config["Autentication_Type"]
 link_jira = config["Link_Jira"]
-email = config["Email"]
+user_short = config["User_Short"]
 password = config["Password"]
 answers = config["Answers"]
 
@@ -69,22 +70,44 @@ else:
 #print(fecha_formateada)
 
 opciones = webdriver.ChromeOptions()
-opciones.add_argument("--headless")
+#opciones.add_argument("--headless")
 driver = webdriver.Chrome(options=opciones)
 
 # Abrir el sitio web del Jira
 driver.get(link_jira)
-
+time.sleep(5)
 # Get the current URL.
 current_url = driver.current_url
+
+wait = WebDriverWait(driver,15)
+
+#Posibles respuestas al link
+# 1. Ingreso deirecto
+# 2. Colocando el correo completo
+# 3. Colocando el usuario corto
+
+link_responses_html_elements = ['UserName','','']
 
 # If the current URL is not the expected URL
 if current_url != link_jira:
 
-    wait = WebDriverWait(driver,15)
+    new_url = f"{current_url[0:8]}{user_short}:{password}@{current_url[8:]}"
+    print(new_url)
+    time.sleep(1)
+    driver.get(new_url)
+    #verificar para cuando se encienda el VPN
+
+    #wait.until(EC.number_of_windows_to_be(2))
+    
+
+    #to have in count https://umane.emeal.nttdata.com/jiraito/plugins/servlet/easysso/saml/fail -> page failed
+
+    print(len(driver.window_handles))
+
+    print("Llegué hasta acá")
 
     input_name = wait.until(EC.presence_of_element_located((By.NAME,"UserName")))
-    input_name.send_keys(email)
+    input_name.send_keys(f"{user_short}@emeal.nttdata.com")
 
     input_password = wait.until(EC.presence_of_element_located((By.NAME,"Password")))
     input_password.send_keys(password)
@@ -95,34 +118,48 @@ if current_url != link_jira:
     button_change_parameters = wait.until(EC.presence_of_element_located((By.ID,"differentVerificationOption")))
     button_change_parameters.click()
 
-    button_questions = wait.until(EC.presence_of_element_located((By.ID,"verificationOption2")))
-    button_questions.click()
+    #Tipo de autenticación
+    if autentication_type =='Answers':
+        button_questions = wait.until(EC.presence_of_element_located((By.ID,"verificationOption2")))
+        button_questions.click()
 
-    lbl_question1 = wait.until(EC.presence_of_element_located((By.ID, "question1Input")))
-    lbl_question2 = wait.until(EC.presence_of_element_located((By.ID, "question2Input")))
-    question1 = lbl_question1.get_attribute("value")
-    question2 = lbl_question2.get_attribute("value")
+        lbl_question1 = wait.until(EC.presence_of_element_located((By.ID, "question1Input")))
+        lbl_question2 = wait.until(EC.presence_of_element_located((By.ID, "question2Input")))
+        question1 = lbl_question1.get_attribute("value")
+        question2 = lbl_question2.get_attribute("value")
 
-    input_ans1 = wait.until(EC.presence_of_element_located((By.NAME,"Answer1")))
-    input_ans2 = wait.until(EC.presence_of_element_located((By.NAME,"Answer2")))
+        input_ans1 = wait.until(EC.presence_of_element_located((By.NAME,"Answer1")))
+        input_ans2 = wait.until(EC.presence_of_element_located((By.NAME,"Answer2")))
 
-    question_words_ES = {"mascota":mascota,"película":pelicula,"colegio":colegio,"equipo":equipo}
-    #question_words_EN = ["pet","movies","school","team"]
+        question_words_ES = {"mascota":mascota,"película":pelicula,"colegio":colegio,"equipo":equipo}
+        #question_words_EN = ["pet","movies","school","team"]
 
-    for word in question_words_ES:
-        if word in question1:
-            input_ans1.send_keys(question_words_ES[word])
-        elif word in question2:
-            input_ans2.send_keys(question_words_ES[word])
-        else:
-            pass
+        for word in question_words_ES:
+            if word in question1:
+                input_ans1.send_keys(question_words_ES[word])
+            elif word in question2:
+                input_ans2.send_keys(question_words_ES[word])
+            else:
+                pass
 
-    button_login = wait.until(EC.presence_of_element_located((By.ID,"authenticateButton")))
-    button_login.click()
+        button_login = wait.until(EC.presence_of_element_located((By.ID,"authenticateButton")))
+        button_login.click()
+
+    elif autentication_type == 'Call':
+        button_call = wait.until(EC.presence_of_element_located((By.ID,"verificationOption1")))
+        button_call.click()
+
+    elif autentication_type == 'Message':
+        pass
 
 else:
     print("Entró directamente al Jira")
 
+
+#if current_url != link_jira:
+    #driver.get(link_jira)
+
+##Crear un def para lo de abajo (acá ya se hace el incurrido)
 button_more = wait.until(EC.presence_of_element_located((By.ID,"opsbar-operations_more")))
 button_more.click()
 
@@ -137,15 +174,18 @@ input_date_logged = wait.until(EC.presence_of_element_located((By.ID,"log-work-d
 input_date_logged.clear()
 input_date_logged.send_keys(fecha_formateada)
 
-div_ta = wait.until(EC.presence_of_element_located((By.ID,"log-work-dialog")))
-div_ta.click()
-input_ta = wait.until(EC.presence_of_element_located((By.XPATH,"/html/body/div[17]/div[2]/form/div[1]/fieldset/div[4]/div[1]/div[1]/div[9]/textarea")))
-input_ta.send_keys(content)
-#print(type(input_ta))
-#element.send_keys("Hola")
-#driver.execute_script("arguments[0].value = 'myValue';", element)
 
-#driver.execute_script('document.querySelector("#comment").innerText = "Nuevo texto"')
+formulario = wait.until(EC.presence_of_element_located((By.ID,"log-work")))
+text_area = driver.find_elements(By.ID,"comment")
+
+for element in text_area:
+    try:
+        element.send_keys(content)
+    except:
+        print("No se pudo escribir en ningún ta")
+
+log_submit_button = wait.until(EC.presence_of_element_located((By.ID,"log-work-submit")))
+#log_submit_button.click()
 
 # Mantener la ventana abierta hasta que presiones Enter
 input("Presiona Enter para finalizar...")
