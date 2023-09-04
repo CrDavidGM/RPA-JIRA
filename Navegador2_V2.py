@@ -3,11 +3,25 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
+from selenium.common.exceptions import TimeoutException
+from tkinter import messagebox
+
 import time
 
 import tkinter as tk
 import json
 
+#================================================================
+#RAMA PRUEBAS --
+#Si no harás un merge, cambia a la rama de pruebas.
+
+#=================================================================
+#Patrones y configuraciones
+autentication_type_conf = ["Answers","Call","Message"]
+link_jira_patron = r"" #se probará con un "in"
+user_short_patron = r"" 
+logwork_hours_patron = r"\d{1,2}h"
+logwork_date_hour_patron = r"" #04/sep/23 7:14 AM
 #=================================================================
 #Archivo JSON
 with open("ConfigPersonal.json","r") as archivo:
@@ -54,7 +68,6 @@ content = "Hola desde el script"
 ventana.mainloop()
 #=================================================================
 
-
 #Meses dict
 meses = {"01":"ene","02":"feb","03":"mar","04":"abr","05":"may","06":"jun","07":"jul","08":"ago","09":"sep","10":"oct","11":"nov","12":"dic"}
 
@@ -67,7 +80,6 @@ if logwork_date_hour == "":
     fecha_formateada = f"{dia}/{meses[mes]}/{año} 09:00 AM"
 else:
     fecha_formateada = logwork_date_hour
-#print(fecha_formateada)
 
 opciones = webdriver.ChromeOptions()
 #opciones.add_argument("--headless")
@@ -75,7 +87,7 @@ driver = webdriver.Chrome(options=opciones)
 
 # Abrir el sitio web del Jira
 driver.get(link_jira)
-time.sleep(5)
+time.sleep(3)
 # Get the current URL.
 current_url = driver.current_url
 
@@ -86,71 +98,163 @@ wait = WebDriverWait(driver,15)
 # 2. Colocando el correo completo
 # 3. Colocando el usuario corto
 
-link_responses_html_elements = ['UserName','','']
+#============================#
 
-# If the current URL is not the expected URL
-if current_url != link_jira:
+#============================#============================#============================#
 
-    new_url = f"{current_url[0:8]}{user_short}:{password}@{current_url[8:]}"
-    print(new_url)
-    time.sleep(1)
-    driver.get(new_url)
-    #verificar para cuando se encienda el VPN
+def get_error_type(error_msg):
+    #Error en ----   Credenciales Mensajes Llamada    Respuestas
+    error_key_words = ["usuario","código","teléfono","respuestas"]
+    for key_word in error_key_words:
+        if key_word in error_msg:
+            print(f"error en {key_word}")
+            return key_word
+        else:
+            return ""
+        
+#============================#============================#============================#
+def login_by_credentials():
+    for i in range(2):
+        input_name = wait.until(EC.presence_of_element_located((By.ID,"userNameInput")))
+        input_name.clear()
+        input_name.send_keys(f"{user_short}@emeal.nttdata.com")
 
-    #wait.until(EC.number_of_windows_to_be(2))
-    
+        input_password = wait.until(EC.presence_of_element_located((By.ID,"passwordInput")))
+        input_password.clear()
+        input_password.send_keys(password)
 
-    #to have in count https://umane.emeal.nttdata.com/jiraito/plugins/servlet/easysso/saml/fail -> page failed
+        button_submit = wait.until(EC.presence_of_element_located((By.ID,"submitButton")))
+        button_submit.click()
 
-    print(len(driver.window_handles))
+        time.sleep(1)
 
-    print("Llegué hasta acá")
+        try:
+            lbl_err_msg = wait.until(EC.presence_of_element_located((By.ID,"error")))
+            if lbl_err_msg.is_displayed():
+                print("true")
+                error_msg = lbl_err_msg.text
+                error_type = get_error_type(error_msg)
+                print(error_type)
+            else:
+                print("false")
+                choose_verification()
+                break
+        except:
+                choose_verification()
+                break
 
-    input_name = wait.until(EC.presence_of_element_located((By.NAME,"UserName")))
-    input_name.send_keys(f"{user_short}@emeal.nttdata.com")
+    #Crear un pop up donde termine el programa indicando el programa.
+    messagebox.showerror("Error","Credenciales incorrectas.")
+#============================#============================#============================#
 
-    input_password = wait.until(EC.presence_of_element_located((By.NAME,"Password")))
-    input_password.send_keys(password)
-
-    button_submit = wait.until(EC.presence_of_element_located((By.ID,"submitButton")))
-    button_submit.click()
-
+def choose_verification():
     button_change_parameters = wait.until(EC.presence_of_element_located((By.ID,"differentVerificationOption")))
     button_change_parameters.click()
-
     #Tipo de autenticación
     if autentication_type =='Answers':
-        button_questions = wait.until(EC.presence_of_element_located((By.ID,"verificationOption2")))
-        button_questions.click()
+        for i in range(3):
+            button_questions = wait.until(EC.presence_of_element_located((By.ID,"verificationOption2")))
+            button_questions.click()
 
-        lbl_question1 = wait.until(EC.presence_of_element_located((By.ID, "question1Input")))
-        lbl_question2 = wait.until(EC.presence_of_element_located((By.ID, "question2Input")))
-        question1 = lbl_question1.get_attribute("value")
-        question2 = lbl_question2.get_attribute("value")
+            lbl_question1 = wait.until(EC.presence_of_element_located((By.ID, "question1Input")))
+            lbl_question2 = wait.until(EC.presence_of_element_located((By.ID, "question2Input")))
+            question1 = lbl_question1.get_attribute("value")
+            question2 = lbl_question2.get_attribute("value")
 
-        input_ans1 = wait.until(EC.presence_of_element_located((By.NAME,"Answer1")))
-        input_ans2 = wait.until(EC.presence_of_element_located((By.NAME,"Answer2")))
+            input_ans1 = wait.until(EC.presence_of_element_located((By.NAME,"Answer1")))
+            input_ans2 = wait.until(EC.presence_of_element_located((By.NAME,"Answer2")))
 
-        question_words_ES = {"mascota":mascota,"película":pelicula,"colegio":colegio,"equipo":equipo}
-        #question_words_EN = ["pet","movies","school","team"]
+            question_words_ES = {"mascota":mascota,"película":pelicula,"colegio":colegio,"equipo":equipo}
+            #question_words_EN = ["pet","movies","school","team"]
 
-        for word in question_words_ES:
-            if word in question1:
-                input_ans1.send_keys(question_words_ES[word])
-            elif word in question2:
-                input_ans2.send_keys(question_words_ES[word])
-            else:
-                pass
+            for word in question_words_ES:
+                if word in question1:
+                    input_ans1.send_keys(question_words_ES[word])
+                elif word in question2:
+                    input_ans2.send_keys(question_words_ES[word])
+                else:
+                    pass
 
-        button_login = wait.until(EC.presence_of_element_located((By.ID,"authenticateButton")))
-        button_login.click()
+            button_login = wait.until(EC.presence_of_element_located((By.ID,"authenticateButton")))
+            button_login.click()
+
+            print(i)    
+            try:
+                lbl_err_msg = wait.until(EC.presence_of_element_located((By.ID,"errorDiv")))
+                if lbl_err_msg.is_displayed():
+                    print("is displayed")
+                    #error_msg = lbl_err_msg.text
+                    #error_type = get_error_type(error_msg)
+                    #print(error_type)
+                else:
+                    print("no displayed")
+                    break
+            except:
+                    print("no se puede leer")
+                    break
+
+        messagebox.showerror("Error","Las respuestas no coinciden.")
+        # Try Except para determinar el error - si existe ... 
+        # Retry answer authentication 2 veces más
+        # Si no funciona, pop up de error & finish
 
     elif autentication_type == 'Call':
-        button_call = wait.until(EC.presence_of_element_located((By.ID,"verificationOption1")))
-        button_call.click()
+        for i in  range(2):
+            button_call = wait.until(EC.presence_of_element_located((By.ID,"verificationOption1")))
+            button_call.click()
+
+            try:
+                lbl_err_msg = wait.until(EC.presence_of_element_located((By.ID,"errorDiv")))
+                if lbl_err_msg.is_displayed():
+                    print("is displayed")
+                    button_change_parameters = wait.until(EC.presence_of_element_located((By.ID,"differentVerificationOption")))
+                    button_change_parameters.click()
+                    #error_msg = lbl_err_msg.text
+                    #error_type = get_error_type(error_msg)
+                    #print(error_type)
+                else:
+                    print("no displayed")
+                    break
+            except:
+                    print("no se puede leer")
+                    break
+            
+        messagebox.showerror("Error","Las llamadas no han sido contestadas o no se ha marcado el símobolo '#'")
+
+        # Try Except para determinar el error - si existe ... 
+        # Retry call authentication 2 vez más
+        # Si no funciona, pop up de error & finish
 
     elif autentication_type == 'Message':
+        #Crear código
         pass
+
+        # Try Except para determinar el error - si existe ... 
+        # Retry call authentication 3 veces más
+        # Si no funciona, pop up de error & finish
+
+    time.sleep(1)
+
+#============================#============================#============================#
+
+if current_url != link_jira:
+    
+    #True: Ingresó directamente pero mandó a la página de error
+    #False: Ingresó a página de credenciales -> VPN - No VPN
+    if "fail" in current_url: 
+        time.sleep(1)
+        #Redireccionar al link principal
+        driver.get(link_jira) #Debería llevar a la página de la tarea
+    else: #Si no está en la página fail, quiere decir que ha redireccionado a una de las páginas de login 
+        try:
+            print("logeo por credenciales")
+            login_by_credentials()
+        except:
+            print("logueo por link")
+            new_url = f"{current_url[0:8]}{user_short}:{password}@{current_url[8:]}"
+            time.sleep(2)
+            if driver.current_url != link_jira:
+                driver.get(new_url)    
 
 else:
     print("Entró directamente al Jira")
@@ -159,32 +263,33 @@ else:
 #if current_url != link_jira:
     #driver.get(link_jira)
 
-##Crear un def para lo de abajo (acá ya se hace el incurrido)
-button_more = wait.until(EC.presence_of_element_located((By.ID,"opsbar-operations_more")))
-button_more.click()
+def incur_process():
+    ##Crear un def para lo de abajo (acá ya se hace el incurrido)
+    button_more = wait.until(EC.presence_of_element_located((By.ID,"opsbar-operations_more")))
+    button_more.click()
 
-button_logwork = wait.until(EC.presence_of_element_located((By.ID,"log-work")))
-button_logwork.click()
+    button_logwork = wait.until(EC.presence_of_element_located((By.ID,"log-work")))
+    button_logwork.click()
 
-input_hours_logged = wait.until(EC.presence_of_element_located((By.ID,"log-work-time-logged")))
-input_hours_logged.clear()
-input_hours_logged.send_keys(logwork_hours)
+    input_hours_logged = wait.until(EC.presence_of_element_located((By.ID,"log-work-time-logged")))
+    input_hours_logged.clear()
+    input_hours_logged.send_keys(logwork_hours)
 
-input_date_logged = wait.until(EC.presence_of_element_located((By.ID,"log-work-date-logged-date-picker")))
-input_date_logged.clear()
-input_date_logged.send_keys(fecha_formateada)
+    input_date_logged = wait.until(EC.presence_of_element_located((By.ID,"log-work-date-logged-date-picker")))
+    input_date_logged.clear()
+    input_date_logged.send_keys(fecha_formateada)
 
 
-formulario = wait.until(EC.presence_of_element_located((By.ID,"log-work")))
-text_area = driver.find_elements(By.ID,"comment")
+    formulario = wait.until(EC.presence_of_element_located((By.ID,"log-work")))
+    text_area = driver.find_elements(By.ID,"comment")
 
-for element in text_area:
-    try:
-        element.send_keys(content)
-    except:
-        print("No se pudo escribir en ningún ta")
+    for element in text_area:
+        try:
+            element.send_keys(content)
+        except:
+            print("No se pudo escribir en ningún ta")
 
-log_submit_button = wait.until(EC.presence_of_element_located((By.ID,"log-work-submit")))
+    log_submit_button = wait.until(EC.presence_of_element_located((By.ID,"log-work-submit")))
 #log_submit_button.click()
 
 # Mantener la ventana abierta hasta que presiones Enter
