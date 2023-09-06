@@ -91,7 +91,7 @@ time.sleep(3)
 # Get the current URL.
 current_url = driver.current_url
 
-wait = WebDriverWait(driver,15)
+wait = WebDriverWait(driver,10)
 
 #Posibles respuestas al link
 # 1. Ingreso deirecto
@@ -237,32 +237,6 @@ def choose_verification():
 
 #============================#============================#============================#
 
-if current_url != link_jira:
-    
-    #True: Ingresó directamente pero mandó a la página de error
-    #False: Ingresó a página de credenciales -> VPN - No VPN
-    if "fail" in current_url: 
-        time.sleep(1)
-        #Redireccionar al link principal
-        driver.get(link_jira) #Debería llevar a la página de la tarea
-    else: #Si no está en la página fail, quiere decir que ha redireccionado a una de las páginas de login 
-        try:
-            print("logeo por credenciales")
-            login_by_credentials()
-        except:
-            print("logueo por link")
-            new_url = f"{current_url[0:8]}{user_short}:{password}@{current_url[8:]}"
-            time.sleep(2)
-            if driver.current_url != link_jira:
-                driver.get(new_url)    
-
-else:
-    print("Entró directamente al Jira")
-
-
-#if current_url != link_jira:
-    #driver.get(link_jira)
-
 def incur_process():
     ##Crear un def para lo de abajo (acá ya se hace el incurrido)
     button_more = wait.until(EC.presence_of_element_located((By.ID,"opsbar-operations_more")))
@@ -292,8 +266,49 @@ def incur_process():
     log_submit_button = wait.until(EC.presence_of_element_located((By.ID,"log-work-submit")))
 #log_submit_button.click()
 
+#=======================================================================================
+
+
+if current_url != link_jira:
+    
+    #True: Ingresó directamente pero mandó a la página de error
+    #False: Ingresó a página de credenciales -> VPN - No VPN
+    if "fail" in current_url: 
+        time.sleep(1)
+        #Redireccionar al link principal
+        driver.get(link_jira) #Debería llevar a la página de la tarea
+    else: #Si no está en la página fail, quiere decir que ha redireccionado a una de las páginas de login 
+        try:
+            print("logeo por credenciales")
+            login_by_credentials()
+        except:
+            for i in range(3):
+                print("logueo por link")
+                #Si están mal las credenciales, vuelve a pedirlas
+                new_url = f"{current_url[0:8]}{user_short}:{password}@{current_url[8:]}"
+                time.sleep(2)
+                if driver.current_url != link_jira:
+                    if "fail" in driver.current_url:
+                        driver.get(link_jira)
+                        break
+                    else:
+                        driver.get(new_url)   
+                else:
+                    incur_process() 
+            messagebox.showerror("Error","Credenciales incorrectas")
+
+else:
+    print("Entró directamente al Jira")
+
+
+#if current_url != link_jira:
+    #driver.get(link_jira)
+
+
+
 # Mantener la ventana abierta hasta que presiones Enter
-input("Presiona Enter para finalizar...")
+messagebox.showinfo("Programa finalizado","Vuelva a intentarlo")
+#input("Presiona Enter para finalizar...")
 
 # Cerrar el navegador al presionar Enter
 driver.quit()
